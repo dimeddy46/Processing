@@ -1,5 +1,5 @@
 int speed = 2, playerSize = 20;
-float x1, y1, x2, y2;
+float x1, y1, x2, y2, viewArea = 30.0;
 boolean[] keys = new boolean[4];
 ArrayList<Line> lines = new ArrayList<Line>();
 
@@ -9,6 +9,9 @@ Shape[] shapes = new Shape[]
       new Shape(600, 600, 50), 
       new Shape(100, 700, 70),
       new Shape(900, 200, 100),
+      new Shape(1000, 400, 100),
+      new Shape(400, 300, 100),
+      new Shape(600, 200, 100),
 };
 void setup() 
 {     
@@ -31,9 +34,25 @@ void draw()
 
 void setMouseTarget()
 {  
+    float crtX = x1+playerSize / 2, crtY = y1+playerSize / 2;
+    float x2tmp = x2, y2tmp = y2;
     fill(0, 255, 0);  
-    circle(x2, y2, 5);
-    line(x1+playerSize / 2, y1+playerSize / 2, x2, y2); 
+    circle(x2, y2, 5);    
+    line(crtX, crtY, x2, y2);
+    
+    x2tmp = 1.5*x2tmp - 0.5*crtX;               
+    y2tmp = 1.5*y2tmp - 0.5*crtY;    
+    float poz = x1-((x2- x1) * y1) / (y2 - y1);
+    if(poz < 0 || poz > width){
+      poz = y1-((y2- y1) * x1) / (x2 - x1);
+      circle(0, poz, 10);
+    }
+    else {
+      circle(poz, 0, 10);
+    }
+    circle(x2tmp, y2tmp, 10);
+    
+    println(crtX+" "+crtY+" | "+x2+" "+y2+" | "+((y2-crtY)/(x2-crtX)) +" "+x2tmp+" "+y2tmp+" | "+ poz);
 }
 
 boolean isCollinear(float px1, float py1, float midx, float midy, float px2, float py2)
@@ -45,32 +64,34 @@ boolean isCollinear(float px1, float py1, float midx, float midy, float px2, flo
 
 void calculateCollision()
 {
-    float rezX, rezY, finalX = -5, finalY = -5;
-    float distPlayer = 0, closestCollision = width * 2;
-
+    float rezX, rezY, finalX = 0, finalY = 0;
+    float distPlayerToTarget = 0, closestCollision = width * 2;
+    
     for(int i = 0;i < lines.size();i++)
     {
-        rezX = ((x1 * y2 - y1 * x2) * (lines.get(i).x3 - lines.get(i).x4) - (x1 - x2) * (lines.get(i).x3 * lines.get(i).y4 - lines.get(i).y3 * lines.get(i).x4)) /
-                             ((x1 - x2) * (lines.get(i).y3 - lines.get(i).y4) - (y1 - y2) * (lines.get(i).x3 - lines.get(i).x4));
-                                    
-        rezY = ((x1 * y2 - y1 * x2) * (lines.get(i).y3 - lines.get(i).y4) - (y1 - y2) * (lines.get(i).x3 * lines.get(i).y4 - lines.get(i).y3 * lines.get(i).x4)) / 
-                             ((x1 - x2) * (lines.get(i).y3 - lines.get(i).y4) - (y1 - y2) * (lines.get(i).x3 - lines.get(i).x4));
+        float x3 = lines.get(i).x3, y3 = lines.get(i).y3, x4 = lines.get(i).x4, y4 = lines.get(i).y4;
         
-        if (isCollinear(lines.get(i).x3, lines.get(i).y3, rezX, rezY, lines.get(i).x4, lines.get(i).y4))
+        rezX = ((x1 * y2 - y1 * x2) * (x3 - x4) - (x1 - x2) * (x3 * y4 - y3 * x4)) /
+                         ((x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4));
+                                    
+        rezY = ((x1 * y2 - y1 * x2) * (y3 - y4) - (y1 - y2) * (x3 * y4 - y3 * x4)) / 
+                         ((x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4));
+        
+        if (isCollinear(x3, y3, rezX, rezY, x4, y4))
         {           
-              distPlayer = dist(x1, y1, rezX, rezY);
-              if(distPlayer < closestCollision && isCollinear(x1, y1, rezX, rezY, x2, y2))
+              distPlayerToTarget = dist(x1, y1, rezX, rezY);
+              if(distPlayerToTarget < closestCollision && isCollinear(x1, y1, rezX, rezY, x2, y2))
               { 
                   finalX = rezX; 
                   finalY = rezY; 
-                  closestCollision = distPlayer; 
+                  closestCollision = distPlayerToTarget; 
               }
         }
     }
     
-    if(finalX != -5 && finalY != -5) {
+    if(finalX != 0 && finalY != 0) 
+    {
         x2 = finalX; y2 = finalY;
-       // circle(finalX+2, finalY, 5);
     }
 }
 
@@ -88,9 +109,8 @@ void movePlayer()
     if(keys[1]) y1 += speed;
     if(keys[2]) x1 -= speed;
     if(keys[3]) x1 += speed;
-    
     fill(255, 0, 0);
-    rect(x1, y1, playerSize, playerSize);
+    rect(x1, y1, playerSize, playerSize); 
 }
 
 void keyPressed() 
