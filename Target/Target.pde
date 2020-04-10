@@ -1,4 +1,4 @@
-int speed = 2, playerSize = 20;
+int speed = 2, playerSize = 15;
 float x1, y1, x2, y2, viewArea = 30.0;
 boolean[] keys = new boolean[4];
 ArrayList<Line> lines = new ArrayList<Line>();
@@ -34,25 +34,40 @@ void draw()
 
 void setMouseTarget()
 {  
-    float crtX = x1+playerSize / 2, crtY = y1+playerSize / 2;
-    float x2tmp = x2, y2tmp = y2;
-    fill(0, 255, 0);  
+    float pX = x1+playerSize / 2, pY = y1+playerSize / 2;
+    float projX = pX-((x2 - pX) * pY) / (y2 - pY);
+    float projY = pY-((y2 - pY) * pX) / (x2 - pX);
+    float finalX, finalY;
+    
+    if(projX < 0 || projX > width)
+    {
+        if(x2 - pX < 0) 
+        { 
+            finalX = 5; finalY = projY;
+        }
+        else 
+        {
+            finalX = width-5; finalY = height-projY;
+        }
+    }
+    else 
+    {
+        if(y2 - y1 < 0) 
+        { 
+            finalX = projX; finalY = 5;
+        }
+        else 
+        { 
+            finalX = width-projX;  finalY = height-5; 
+        } 
+    }
+    
+    fill(255, 0, 0);  
     circle(x2, y2, 5);    
-    line(crtX, crtY, x2, y2);
+    line(pX, pY, x2, y2);
+    circle(finalX, finalY, 10);
     
-    x2tmp = 1.5*x2tmp - 0.5*crtX;               
-    y2tmp = 1.5*y2tmp - 0.5*crtY;    
-    float poz = x1-((x2- x1) * y1) / (y2 - y1);
-    if(poz < 0 || poz > width){
-      poz = y1-((y2- y1) * x1) / (x2 - x1);
-      circle(0, poz, 10);
-    }
-    else {
-      circle(poz, 0, 10);
-    }
-    circle(x2tmp, y2tmp, 10);
-    
-    println(crtX+" "+crtY+" | "+x2+" "+y2+" | "+((y2-crtY)/(x2-crtX)) +" "+x2tmp+" "+y2tmp+" | "+ poz);
+    println(pX+" "+pY+" | "+x2+" "+y2+" | "+((y2-pY)/(x2-pX)) +" | "+projX +" "+projY +" | ");
 }
 
 boolean isCollinear(float px1, float py1, float midx, float midy, float px2, float py2)
