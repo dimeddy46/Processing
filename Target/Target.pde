@@ -1,5 +1,5 @@
-int speed = 2, playerSize = 15;
-float x1, y1, x2, y2, viewArea = 30.0;
+int speed = 2, playerSize = 15, targetSz = 10;
+float x1, y1, pX, pY, x2, y2, viewArea = 30.0, finalX, finalY;
 boolean[] keys = new boolean[4];
 ArrayList<Line> lines = new ArrayList<Line>();
 
@@ -24,50 +24,63 @@ void setup()
 void draw()
 {
     background(200);
-    x2 = mouseX;
-    y2 = mouseY;   
     drawShapes();
-    calculateCollision();
-    setMouseTarget();
     movePlayer();  
+    x2 = mouseX;
+    y2 = mouseY;  
+    
+    setMouseProjection();
+    
+    float[] collision = computeCollision(); 
+    if(collision[0] != -1)
+    { 
+        finalX = collision[0];
+        finalY = collision[1];
+    }
+    
+    fill(255, 0, 0);
+    circle(finalX, finalY, 20);
+    line(pX, pY, finalX, finalY);
 }
 
-void setMouseTarget()
-{  
-    float pX = x1+playerSize / 2, pY = y1+playerSize / 2;
-    float projX = pX-((x2 - pX) * pY) / (y2 - pY);
-    float projY = pY-((y2 - pY) * pX) / (x2 - pX);
-    float finalX, finalY;
+boolean isValidTarget(float x, float max)
+{
+   return x >= targetSz && max-targetSz >= x;
+}
+
+void setMouseProjection()
+{   
+    float slope = (y2 - pY) / (x2 - pX);   
+    float projX = (targetSz + slope * pX - pY) / slope; 
+    float projY = slope * targetSz - slope*pX + pY;
+    float testX = (height + slope * pX - pY) / slope;
+    float testY = slope * width - slope*pX + pY;
+
+    if(y2 - pY > 0 && isValidTarget(testX, width))   // jos
+    {
+        finalX = testX; 
+        finalY = height-targetSz;
+    } 
     
-    if(projX < 0 || projX > width)
+    if(x2 - pX > 0 && isValidTarget(testY, height))  // dreapta 
     {
-        if(x2 - pX < 0) 
-        { 
-            finalX = 5; finalY = projY;
-        }
-        else 
-        {
-            finalX = width-5; finalY = height-projY;
-        }
-    }
-    else 
-    {
-        if(y2 - y1 < 0) 
-        { 
-            finalX = projX; finalY = 5;
-        }
-        else 
-        { 
-            finalX = width-projX;  finalY = height-5; 
-        } 
+        finalX = width-targetSz; 
+        finalY = testY;
     }
     
-    fill(255, 0, 0);  
-    circle(x2, y2, 5);    
-    line(pX, pY, x2, y2);
-    circle(finalX, finalY, 10);
+    if(y2 - pY < 0 && isValidTarget(projX, width))   // sus
+    {
+        finalX = projX; 
+        finalY = targetSz;
+    }  
     
-    println(pX+" "+pY+" | "+x2+" "+y2+" | "+((y2-pY)/(x2-pX)) +" | "+projX +" "+projY +" | ");
+    if(x2 - pX < 0 && isValidTarget(projY, height))  // stanga
+    {
+        finalX = targetSz; 
+        finalY = projY;
+    }  
+
+    //println(pX+" "+pY+" | "+x2+" "+y2+" | "+slope+" | "+projX +" "+projY +" | "+testX+" "+testY+ " | ");
 }
 
 boolean isCollinear(float px1, float py1, float midx, float midy, float px2, float py2)
@@ -77,37 +90,34 @@ boolean isCollinear(float px1, float py1, float midx, float midy, float px2, flo
      return false;
 }
 
-void calculateCollision()
-{
-    float rezX, rezY, finalX = 0, finalY = 0;
+float[] computeCollision()
+{   
+    float rezX, rezY, finX = -1, finY = -1;
     float distPlayerToTarget = 0, closestCollision = width * 2;
     
     for(int i = 0;i < lines.size();i++)
     {
         float x3 = lines.get(i).x3, y3 = lines.get(i).y3, x4 = lines.get(i).x4, y4 = lines.get(i).y4;
         
-        rezX = ((x1 * y2 - y1 * x2) * (x3 - x4) - (x1 - x2) * (x3 * y4 - y3 * x4)) /
-                         ((x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4));
+        rezX = ((pX * y2 - pY * x2) * (x3 - x4) - (pX - x2) * (x3 * y4 - y3 * x4)) /
+                         ((pX - x2) * (y3 - y4) - (pY - y2) * (x3 - x4));
                                     
-        rezY = ((x1 * y2 - y1 * x2) * (y3 - y4) - (y1 - y2) * (x3 * y4 - y3 * x4)) / 
-                         ((x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4));
+        rezY = ((pX * y2 - pY * x2) * (y3 - y4) - (pY - y2) * (x3 * y4 - y3 * x4)) / 
+                         ((pX - x2) * (y3 - y4) - (pY - y2) * (x3 - x4));
         
         if (isCollinear(x3, y3, rezX, rezY, x4, y4))
         {           
-              distPlayerToTarget = dist(x1, y1, rezX, rezY);
-              if(distPlayerToTarget < closestCollision && isCollinear(x1, y1, rezX, rezY, x2, y2))
+              distPlayerToTarget = dist(pX, pY, rezX, rezY);
+              if(distPlayerToTarget < closestCollision && isCollinear(pX, pY, rezX, rezY, finalX, finalY))
               { 
-                  finalX = rezX; 
-                  finalY = rezY; 
+                  finX = rezX; 
+                  finY = rezY; 
                   closestCollision = distPlayerToTarget; 
               }
         }
     }
-    
-    if(finalX != 0 && finalY != 0) 
-    {
-        x2 = finalX; y2 = finalY;
-    }
+        
+    return new float[] {finX, finY};
 }
 
 void drawShapes() 
@@ -115,7 +125,7 @@ void drawShapes()
     for(int i = 0;i < shapes.length; ++i)
     {
         shapes[i].drawObject();
-    }
+    }    
 }
 
 void movePlayer()
@@ -125,7 +135,10 @@ void movePlayer()
     if(keys[2]) x1 -= speed;
     if(keys[3]) x1 += speed;
     fill(255, 0, 0);
-    rect(x1, y1, playerSize, playerSize); 
+    rect(x1, y1, playerSize, playerSize);
+    
+    pX = x1+playerSize / 2; 
+    pY = y1+playerSize / 2;    
 }
 
 void keyPressed() 
